@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>実験装置予約システム</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<script>
+    const SUPABASE_URL = "https://uepdzvefpayxzjlkuwra.supabase.co";
+    const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_ju1I6Nuf7WB-MU_WmSjylQ_vtaNf2ED";
+
+    const supabaseClient = supabase.createClient(
+        SUPABASE_URL,
+        SUPABASE_PUBLISHABLE_KEY
+    );
+
+console.log("Supabase接続準備OK");
+
+//保存されている予約を読み込む
+
+async function loadReservationsFromSupabase() {
+
+    const { data, error } =
+        await supabaseClient
+            .from("reservations")
+            .select("*");
+
+    if (error) {
+        console.error(
+            "予約データの読み込みに失敗しました:",
+            error
+        );
+
+        return;
+    }
+
+    console.log(
+        "Supabaseから取得した予約:",
+        data
+    );
+
+    // 予約データを空の状態にする
+    equipmentReservations = [];
+
+    equipment.forEach(() => {
+
+        const days = [];
+
+        for (let i = 0; i < 14; i++) {
+            days.push([]);
+        }
+
+        equipmentReservations.push(days);
+    });
+
+    // Supabaseの予約を予約表の形式に変換する
+    data.forEach((reservation) => {
+
+        const equipmentIndex =
+            equipment.indexOf(reservation.equipment);
+
+        const dayIndex =
+            dates.indexOf(reservation.reservation_date);
+
+        // 現在表示している14日間に含まれる予約だけ追加
+        if (
+            equipmentIndex !== -1 &&
+            dayIndex !== -1
+        ) {
+
+            equipmentReservations
+                [equipmentIndex]
+                [dayIndex]
+                .push({
+                    id: reservation.id,
+                    name: reservation.user_name,
+                    start: reservation.start_time.slice(0, 5),
+                    end: reservation.end_time.slice(0, 5),
+                    userId: reservation.user_id
+                });
+        }
+    });
+
+    // 予約表を更新
+    for (
+        let equipmentIndex = 0;
+        equipmentIndex < equipment.length;
+        equipmentIndex++
+    ) {
+
+        for (
+            let dayIndex = 0;
+            dayIndex < 14;
+            dayIndex++
+        ) {
+
+            const td =
+                equipmentTable.rows[equipmentIndex]
+                .cells[dayIndex + 1];
+
+            displayReservations(
+                td,
+                equipmentReservations
+                    [equipmentIndex]
+                    [dayIndex],
+                equipmentIndex,
+                dayIndex
+            );
+        }
+    }
+}
+
+
+supabaseClient
+    .from("reservations")
+    .select("*")
+    .then(function(result) {
+        console.log("Supabaseテーブル確認結果:", result);
+    });
+
+
+
+</script>
+
+    <style>
+        body {
+            font-family: sans-serif;
+            margin: 20px;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .table-container {
+            overflow-x: auto;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            min-width: 1200px;
+        }
+
+        th, td {
+            border: 1px solid #999;
+            text-align: center;
+            padding: 0;
+        }
+
+        th {
+            background-color: #f0f0f0;
+            padding: 10px;
+        }
+
+        th:first-child,
+        td:first-child {
+            position: sticky;
+            left: 0;
+            background-color: white;
+            min-width: 100px;
+            padding: 10px;
+        }
+
+        td {
+            vertical-align: top;
+        }
+
+        /* 予約済み部分 */
+        .reservation {
+            background-color: #dff3ff;
+            border-bottom: 1px solid #999;
+            padding: 8px 5px;
+            cursor: pointer;
+        }
+
+        /* 予約済み部分にマウスを乗せたとき */
+        .reservation:hover {
+            background-color: #c8eaff;
+        }
+
+        /* 新しい予約を入れる部分 */
+        .add-reservation {
+            background-color: white;
+            padding: 10px 5px;
+            min-height: 25px;
+            cursor: pointer;
+        }
+
+        /* 新しい予約を入れる部分にマウスを乗せたとき */
+        .add-reservation:hover {
+            background-color: #f5f5f5;
+        }
+        /* ログイン画面 */
+        #login-screen {
+            max-width: 400px;
+            margin: 80px auto;
+            padding: 30px;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            background-color: #f9f9f9;
+        }
+
+        #login-screen h2 {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        #login-screen input {
+            width: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        #login-screen button {
+            width: 100%;
+            padding: 10px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        #login-message {
+            margin-top: 15px;
+            text-align: center;
+        }
+
+        #logout-button {
+            display: block;
+            margin: 0 0 15px auto;
+            padding: 8px 15px;
+            cursor: pointer;
+        }
+
+
+
+    </style>
+
+
+
+</head>
+
+<body>
+
+    <!-- ログイン画面 -->
+    <div id="login-screen">
+
+        <h2>ログイン</h2>
+
+        <form id="login-form">
+
+            <input
+                type="email"
+                id="login-email"
+                placeholder="メールアドレス"
+                required
+            >
+
+            <input
+                type="password"
+                id="login-password"
+                placeholder="パスワード"
+                required
+            >
+
+            <button type="submit">
+                ログイン
+            </button>
+
+        </form>
+
+        <div id="login-message"></div>
+
+    </div>
+
+
+
+
+    <div id="app-content" style="display: none;">
+
+        <button id="logout-button">
+            ログアウト
+        </button>
+
+        <h1>実験装置予約システム</h1>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr id="date-row">
+                    <th>装置</th>
+                </tr>
+            </thead>
+
+            <tbody id="equipment-table">
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+
+    <script>
+        // 実験装置の一覧
+        const equipment = [
+            "CD",
+            "CD2号",
+            "UV",
+            "FL",
+            "AFM",
+            "DLS",
+            "PEAQ ITC",
+            "ITC200",
+            "NMR",
+            "AUC",
+            "DSC",
+            "FTIR",
+            "ICP"
+        ];
+
+        // 曜日の一覧
+        const weekdays = ["日", "月", "火", "水", "木", "金", "土"];
+
+        // 今日から14日分の日付を作る
+const dates = [];
+
+for (let i = 0; i < 14; i++) {
+    const date = new Date();
+    date.setDate(date.getDate() + i);
+
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, "0");
+    const day = String(date.getDate()).padStart(2, "0");
+
+    dates.push(`${year}-${month}-${day}`);
+}
+
+// 保存されている予約を読み込む
+const savedReservations =
+    localStorage.getItem("equipmentReservations");
+
+let equipmentReservations = [];
+
+equipment.forEach(() => {
+
+    const days = [];
+
+    for (let i = 0; i < 14; i++) {
+        days.push([]);
+    }
+
+    equipmentReservations.push(days);
+});
+
+if (savedReservations) {
+
+    const savedData =
+        JSON.parse(savedReservations);
+
+    // 保存されている日付と、現在表示する日付を比較する
+    if (
+        savedData.dates &&
+        savedData.reservations
+    ) {
+
+        for (let equipmentIndex = 0; equipmentIndex < equipment.length; equipmentIndex++) {
+
+            for (let savedDayIndex = 0; savedDayIndex < savedData.dates.length; savedDayIndex++) {
+
+                const savedDate =
+                    savedData.dates[savedDayIndex];
+
+                const currentDayIndex =
+                    dates.indexOf(savedDate);
+
+                if (currentDayIndex !== -1) {
+
+                    equipmentReservations[equipmentIndex][currentDayIndex] =
+                        savedData.reservations[equipmentIndex][savedDayIndex];
+                }
+            }
+        }
+    }
+
+} else {
+
+    equipmentReservations = [];
+
+    equipment.forEach(() => {
+
+        const days = [];
+
+        for (let i = 0; i < 14; i++) {
+            days.push([]);
+        }
+
+        equipmentReservations.push(days);
+    });
+}
+        // 時刻を「分」に変換する
+        function timeToMinutes(time) {
+            const parts = time.split(":");
+
+            if (parts.length !== 2) {
+                return null;
+            }
+
+            const hour = Number(parts[0]);
+            const minute = Number(parts[1]);
+
+            if (
+                !Number.isInteger(hour) ||
+                !Number.isInteger(minute) ||
+                hour < 0 ||
+                hour > 23 ||
+                minute < 0 ||
+                minute > 59
+            ) {
+                return null;
+            }
+
+            return hour * 60 + minute;
+        }
+
+        // 日付を表示する行
+        const dateRow = document.getElementById("date-row");
+
+        for (let i = 0; i < 14; i++) {
+
+            const date = new Date();
+            date.setDate(date.getDate() + i);
+
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const weekday = weekdays[date.getDay()];
+
+            const th = document.createElement("th");
+
+            th.textContent =
+                `${month}/${day}(${weekday})`;
+
+            dateRow.appendChild(th);
+        }
+
+        // 予約を画面に表示する
+        function displayReservations(
+            td,
+            reservations,
+            equipmentIndex,
+            dayIndex
+        ) {
+
+            td.innerHTML = "";
+
+            // 予約済み部分
+            reservations.forEach((reservation, reservationIndex) => {
+
+                const div = document.createElement("div");
+
+                div.className = "reservation";
+
+                div.innerHTML =
+                    reservation.name + "<br>" +
+                    reservation.start + " ～ " +
+                    reservation.end;
+
+                // 予約をクリックしたとき
+                div.addEventListener("click", async function(event) {
+
+                    event.stopPropagation();
+
+// 現在ログインしているユーザーを取得
+const {
+    data: { user },
+    error: userError
+} = await supabaseClient.auth.getUser();
+
+if (userError || !user) {
+    alert("ログイン情報を取得できませんでした。");
+    return;
+}
+
+// 自分の予約か確認
+if (reservation.userId !== user.id) {
+    alert("この予約は他のユーザーの予約です。\n変更・削除はできません。");
+    return;
+}
+
+                    const choice = prompt(
+                        "この予約をどうしますか？\n\n" +
+                        "1：変更\n" +
+                        "2：削除\n" +
+                        "3：何もしない"
+                    );
+
+                    // 変更
+                    if (choice === "1") {
+
+                        const newName = prompt(
+                            "名前を入力してください。",
+                            reservation.name
+                        );
+
+                        if (!newName) {
+                            return;
+                        }
+
+                        const newStart = prompt(
+                            "開始時間を入力してください。",
+                            reservation.start
+                        );
+
+                        if (!newStart) {
+                            return;
+                        }
+
+                        const newEnd = prompt(
+                            "終了時間を入力してください。",
+                            reservation.end
+                        );
+
+                        if (!newEnd) {
+                            return;
+                        }
+
+                        const newStartMinutes =
+                            timeToMinutes(newStart);
+
+                        const newEndMinutes =
+                            timeToMinutes(newEnd);
+
+                        if (
+                            newStartMinutes === null ||
+                            newEndMinutes === null
+                        ) {
+                            alert(
+                                "時間は「10:00」のような形式で入力してください。"
+                            );
+
+                            return;
+                        }
+
+                        if (newStartMinutes >= newEndMinutes) {
+
+                            alert(
+                                "終了時間は開始時間より後にしてください。"
+                            );
+
+                            return;
+                        }
+
+                        // 他の予約との重複を確認
+                        for (
+                            let i = 0;
+                            i < reservations.length;
+                            i++
+                        ) {
+
+                            // 自分自身はチェックしない
+                            if (i === reservationIndex) {
+                                continue;
+                            }
+
+                            const otherStart =
+                                timeToMinutes(
+                                    reservations[i].start
+                                );
+
+                            const otherEnd =
+                                timeToMinutes(
+                                    reservations[i].end
+                                );
+
+                            if (
+                                newStartMinutes < otherEnd &&
+                                newEndMinutes > otherStart
+                            ) {
+
+                                alert(
+                                    "この時間はすでに予約されています。\n\n" +
+                                    reservations[i].name +
+                                    "：" +
+                                    reservations[i].start +
+                                    " ～ " +
+                                    reservations[i].end
+                                );
+
+                                return;
+                            }
+                        }
+
+                        // Supabaseで予約を更新
+const {
+    data: updatedReservation,
+    error: updateError
+} = await supabaseClient
+    .from("reservations")
+    .update({
+        user_name: newName,
+        start_time: newStart,
+        end_time: newEnd
+    })
+    .eq("id", reservation.id)
+    .select()
+    .single();
+
+if (updateError) {
+    console.error(
+        "予約変更エラー:",
+        updateError
+    );
+
+    alert(
+        "予約の変更に失敗しました。\n\n" +
+        updateError.message
+    );
+
+    return;
+}
+
+// 画面表示用のデータを更新
+reservation.name =
+    updatedReservation.user_name;
+
+reservation.start =
+    updatedReservation.start_time.slice(0, 5);
+
+reservation.end =
+    updatedReservation.end_time.slice(0, 5);
+
+// 画面を更新
+displayReservations(
+    td,
+    reservations,
+    equipmentIndex,
+    dayIndex
+);
+                    }
+
+                    // 削除
+                    else if (choice === "2") {
+
+                        const confirmDelete = confirm(
+                            "この予約を削除しますか？"
+                        );
+
+                        if (confirmDelete) {
+
+    // Supabaseから予約を削除
+    const {
+        error: deleteError
+    } = await supabaseClient
+        .from("reservations")
+        .delete()
+        .eq("id", reservation.id);
+
+    if (deleteError) {
+        console.error(
+            "予約削除エラー:",
+            deleteError
+        );
+
+        alert(
+            "予約の削除に失敗しました。\n\n" +
+            deleteError.message
+        );
+
+        return;
+    }
+
+    // 画面表示用の予約データから削除
+    reservations.splice(
+        reservationIndex,
+        1
+    );
+
+    // 画面を更新
+    displayReservations(
+        td,
+        reservations,
+        equipmentIndex,
+        dayIndex
+    );
+}
+                    }
+                });
+
+                td.appendChild(div);
+            });
+
+            // 新しい予約を追加する部分
+            const addDiv = document.createElement("div");
+
+            addDiv.className = "add-reservation";
+
+            addDiv.addEventListener("click", function(event) {
+
+                event.stopPropagation();
+
+                addReservation(
+                    td,
+                    reservations,
+                    equipmentIndex,
+                    dayIndex
+                );
+            });
+
+            td.appendChild(addDiv);
+        }
+
+        // 予約データを保存する
+function saveReservations() {
+    const data = {
+        dates: dates,
+        reservations: equipmentReservations
+    };
+
+    localStorage.setItem(
+        "equipmentReservations",
+        JSON.stringify(data)
+    );
+}
+        // 新しい予約を追加する
+        async function addReservation(
+            td,
+            reservations,
+            equipmentIndex,
+            dayIndex
+        ) {
+
+            const {
+    data: { user },
+    error: userError
+} = await supabaseClient.auth.getUser();
+
+if (userError || !user) {
+    alert("ログイン情報を取得できませんでした。");
+    return;
+}
+
+const {
+    data: profile,
+    error: profileError
+} = await supabaseClient
+    .from("profiles")
+    .select("name")
+    .eq("id", user.id)
+    .single();
+
+if (profileError || !profile) {
+    console.error("プロフィール取得エラー:", profileError);
+
+    alert(
+        "プロフィール情報を取得できませんでした。\n\n" +
+        "管理者に確認してください。"
+    );
+
+    return;
+}
+
+const userName = profile.name;
+
+            const startTime = prompt(
+                "開始時間を入力してください。\n\n" +
+                "例：10:00"
+            );
+
+            if (!startTime) {
+                return;
+            }
+
+            const endTime = prompt(
+                "終了時間を入力してください。\n\n" +
+                "例：12:00"
+            );
+
+            if (!endTime) {
+                return;
+            }
+
+            const startMinutes =
+                timeToMinutes(startTime);
+
+            const endMinutes =
+                timeToMinutes(endTime);
+
+            if (
+                startMinutes === null ||
+                endMinutes === null
+            ) {
+
+                alert(
+                    "時間は「10:00」のような形式で入力してください。"
+                );
+
+                return;
+            }
+
+            if (startMinutes >= endMinutes) {
+
+                alert(
+                    "終了時間は開始時間より後にしてください。"
+                );
+
+                return;
+            }
+
+            // 他の予約との重複を確認
+            for (const reservation of reservations) {
+
+                const otherStart =
+                    timeToMinutes(reservation.start);
+
+                const otherEnd =
+                    timeToMinutes(reservation.end);
+
+                if (
+                    startMinutes < otherEnd &&
+                    endMinutes > otherStart
+                ) {
+
+                    alert(
+                        "この時間はすでに予約されています。\n\n" +
+                        reservation.name + "：" +
+                        reservation.start + " ～ " +
+                        reservation.end
+                    );
+
+                    return;
+                }
+            }
+
+          
+
+// Supabaseに予約を登録
+const {
+    data: newReservation,
+    error: insertError
+} = await supabaseClient
+    .from("reservations")
+    .insert({
+        reservation_date: dates[dayIndex],
+        equipment: equipment[equipmentIndex],
+        user_name: userName,
+        start_time: startTime,
+        end_time: endTime,
+        user_id: user.id
+    })
+    .select()
+    .single();
+
+if (insertError) {
+    console.error("予約登録エラー:", insertError);
+    alert(
+        "予約の登録に失敗しました。\n\n" +
+        insertError.message
+    );
+    return;
+}
+
+// 画面表示用の予約データに追加
+reservations.push({
+    id: newReservation.id,
+    name: newReservation.user_name,
+    start: newReservation.start_time,
+    end: newReservation.end_time,
+    userId: newReservation.user_id
+});
+
+// 画面を更新
+displayReservations(
+    td,
+    reservations,
+    equipmentIndex,
+    dayIndex
+);
+        }
+
+        // 装置の行を作る
+        const equipmentTable =
+            document.getElementById("equipment-table");
+
+        equipment.forEach((name, equipmentIndex) => {
+
+            const tr = document.createElement("tr");
+
+            const equipmentName =
+                document.createElement("td");
+
+            equipmentName.textContent = name;
+
+            tr.appendChild(equipmentName);
+
+            // 14日分の予約欄
+            for (
+                let dayIndex = 0;
+                dayIndex < 14;
+                dayIndex++
+            ) {
+
+                const td = document.createElement("td");
+
+                // 「＋予約する」を表示
+                displayReservations(
+                    td,
+                    equipmentReservations
+                    [equipmentIndex]
+                    [dayIndex],
+                    equipmentIndex,
+                    dayIndex
+                );
+
+                tr.appendChild(td);
+            }
+
+            equipmentTable.appendChild(tr);
+        });
+
+        // Supabaseから予約を読み込む
+        loadReservationsFromSupabase();
+
+        // ログイン画面
+        const loginScreen =
+            document.getElementById("login-screen");
+
+        const appContent =
+            document.getElementById("app-content");
+
+        const loginForm =
+            document.getElementById("login-form");
+
+        const loginMessage =
+            document.getElementById("login-message");
+
+        const logoutButton =
+            document.getElementById("logout-button");
+
+
+        // 現在のログイン状態を確認
+        async function checkLogin() {
+
+            const {
+                data: {
+                    session
+                }
+            } = await supabaseClient.auth.getSession();
+
+            if (session) {
+
+                loginScreen.style.display = "none";
+                appContent.style.display = "block";
+
+            } else {
+
+                loginScreen.style.display = "block";
+                appContent.style.display = "none";
+            }
+        }
+
+
+        // ログイン
+        loginForm.addEventListener(
+            "submit",
+            async function(event) {
+
+                event.preventDefault();
+
+                const email =
+                    document.getElementById(
+                        "login-email"
+                    ).value;
+
+                const password =
+                    document.getElementById(
+                        "login-password"
+                    ).value;
+
+                loginMessage.textContent =
+                    "ログインしています...";
+
+
+                const {
+                    data,
+                    error
+                } = await supabaseClient.auth.signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+
+                if (error) {
+
+                    console.error(
+                        "ログインエラー:",
+                        error
+                    );
+
+                    loginMessage.textContent =
+                        "ログインに失敗しました。メールアドレスとパスワードを確認してください。";
+
+                    return;
+                }
+
+
+                loginMessage.textContent =
+                    "ログインしました。";
+
+                checkLogin();
+            }
+        );
+
+
+        // ログアウト
+        logoutButton.addEventListener(
+            "click",
+            async function() {
+
+                await supabaseClient.auth.signOut();
+
+                checkLogin();
+            }
+        );
+
+
+        // ログイン状態が変化したとき
+        supabaseClient.auth.onAuthStateChange(
+            function(event, session) {
+
+                if (session) {
+
+                    loginScreen.style.display =
+                        "none";
+
+                    appContent.style.display =
+                        "block";
+
+                } else {
+
+                    loginScreen.style.display =
+                        "block";
+
+                    appContent.style.display =
+                        "none";
+                }
+            }
+        );
+
+
+        // 最初にログイン状態を確認
+        checkLogin();
+
+    </script>
+
+</body>
+</html>
