@@ -425,40 +425,6 @@ if (savedReservations) {
             return hour * 60 + minute;
         }
 
-
-        // 時刻の入力を「HH:MM」形式に整える
-        function normalizeTimeInput(time) {
-            time = String(time).trim();
-
-            let hour;
-            let minute;
-
-            if (/^\d{1,2}:\d{2}$/.test(time)) {
-                // 10:00 や 9:00 の形式
-                const parts = time.split(":");
-                hour = Number(parts[0]);
-                minute = Number(parts[1]);
-            } else if (/^\d{3,4}$/.test(time)) {
-                // 900、1000、930 などの形式
-                hour = Number(time.slice(0, -2));
-                minute = Number(time.slice(-2));
-            } else {
-                return null;
-            }
-
-            if (
-                hour < 0 ||
-                hour > 23 ||
-                minute < 0 ||
-                minute > 59
-            ) {
-                return null;
-            }
-
-            return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-        }
-
-
         // 日付を表示する行
         const dateRow = document.getElementById("date-row");
 
@@ -542,31 +508,22 @@ if (reservation.userId !== user.id) {
                             return;
                         }
 
-                        
-const newStartInput = prompt(
-    "開始時間を入力してください。\n\n" +
-    "例：1000 または 10:00",
-    reservation.start
-);
-if (!newStartInput) return;
+                        const newStart = prompt(
+                            "開始時間を入力してください。",
+                            reservation.start
+                        );
 
-const newEndInput = prompt(
-    "終了時間を入力してください。\n\n" +
-    "例：1200 または 12:00",
-    reservation.end
-);
-if (!newEndInput) return;
+                        if (!newStart) {
+                            return;
+                        }
 
-const newStart = normalizeTimeInput(newStartInput);
-const newEnd = normalizeTimeInput(newEndInput);
+                        const newEnd = prompt(
+                            "終了時間を入力してください。",
+                            reservation.end
+                        );
 
-if (newStart === null || newEnd === null) {
-    alert(
-        "時刻は「1000」または「10:00」の形式で入力してください。"
-    );
-    return;
-}
-
+                        if (!newEnd) {
+                            return;
                         }
 
                         const newStartMinutes =
@@ -806,29 +763,13 @@ if (profileError || !profile) {
 
 const userName = profile.name;
 
-            
-const startTimeInput = prompt(
-    "開始時間を入力してください。\n\n" +
-    "例：1000 または 10:00"
-);
-if (!startTimeInput) return;
+            const startTime = prompt(
+                "開始時間を入力してください。\n\n" +
+                "例：10:00"
+            );
 
-const endTimeInput = prompt(
-    "終了時間を入力してください。\n\n" +
-    "例：1200 または 12:00"
-);
-if (!endTimeInput) return;
-
-const startTime = normalizeTimeInput(startTimeInput);
-const endTime = normalizeTimeInput(endTimeInput);
-
-if (startTime === null || endTime === null) {
-    alert(
-        "時刻は「1000」または「10:00」の形式で入力してください。"
-    );
-    return;
-}
-
+            if (!startTime) {
+                return;
             }
 
             const endTime = prompt(
